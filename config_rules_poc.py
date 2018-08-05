@@ -19,19 +19,30 @@ def get_config_client(region):
     return client
 
 def get_config_rules(client):
+    next_token = ""
     config_rules = []
-    response = client.describe_config_rules()
-    if isRequestSuccessful(response):
-        if response['ConfigRules']:
-            config_rules.extend(response['ConfigRules'])
+    while True:
+        response = client.describe_config_rules()
+        if isRequestSuccessful(response):
+            if response['ConfigRules']:
+                config_rules.extend(response['ConfigRules'])
+        if not response.get("NextToken"):
+            break
     return config_rules
 
 def get_compliance_details(client, rule_name):
-    response = client \
-        .get_compliance_details_by_config_rule(ConfigRuleName=rule_name)
-    if isRequestSuccessful(response):
-        evaluation_results = response["EvaluationResults"]
-        return evaluation_results
+    next_token = ""
+    compliance_details = []
+    while True:
+        response = client \
+            .get_compliance_details_by_config_rule(ConfigRuleName=rule_name,
+                                                   NextToken=next_token)
+        if isRequestSuccessful(response):
+            if response["EvaluationResults"]:
+                compliance_details.extend(response["EvaluationResults"])
+        if not response.get("NextToken"):
+            break
+    return compliance_details
 
 def get_compliance_summary(client):
     response = client \
