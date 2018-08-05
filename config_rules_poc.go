@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	AwsDefaultRegion = "us-west-1"
-	AwsAccessKeyId = "access-key-id"
+	AwsDefaultRegion   = "us-west-1"
+	AwsAccessKeyId     = "access-key-id"
 	AwsSecretAccessKey = "secret-access-key"
 )
 
@@ -28,42 +28,69 @@ func getConfigClient(region string) configserviceiface.ConfigServiceAPI {
 
 func getConfigRules(client configserviceiface.ConfigServiceAPI) (
 	[]*configservice.ConfigRule, error) {
-	output, err := client.DescribeConfigRules(&configservice.DescribeConfigRulesInput{
-	})
-	return output.ConfigRules, err
+		configRules := make([]*configservice.ConfigRule, 0)
+		nextToken := ""
+		for {
+			output, err := client.DescribeConfigRules(&configservice.DescribeConfigRulesInput{
+				NextToken: &nextToken,
+			})
+			if err != nil {
+				return configRules, err
+			}
+			configRules = append(configRules, output.ConfigRules...)
+			if output.NextToken == nil {
+				break
+			}
+			nextToken = *output.NextToken
+		}
+		return configRules, nil
 }
 
 func getComplianceDetails(client configserviceiface.ConfigServiceAPI, rule_name string) (
 	[]*configservice.EvaluationResult, error) {
-	output, err := client.GetComplianceDetailsByConfigRule(
-		&configservice.GetComplianceDetailsByConfigRuleInput{
-			ConfigRuleName: &rule_name,
-		})
-	return output.EvaluationResults, err
+		complianceDetails := make([]*configservice.EvaluationResult, 0)
+		nextToken := ""
+		for {
+			output, err := client.GetComplianceDetailsByConfigRule(
+				&configservice.GetComplianceDetailsByConfigRuleInput{
+					ConfigRuleName: &rule_name,
+					NextToken: &nextToken,
+				})
+			if err != nil {
+				return complianceDetails, err
+			}
+			complianceDetails = append(complianceDetails, output.EvaluationResults...)
+			if output.NextToken == nil {
+				break
+			}
+			nextToken = *output.NextToken
+		}
+		return complianceDetails, nil
+
 }
 
 func main() {
 	setAwsConfig()
 	regions := [1]string{AwsDefaultRegion}
 	configRulesResult := make([]*configservice.ConfigRule, 0)
-	configRulesDetailsResult := make([]*configservice.EvaluationResult, 0)
+	complianceDetailsResult := make([]*configservice.EvaluationResult, 0)
 	for _, region := range regions {
 		client := getConfigClient(region)
 		configRules, err := getConfigRules(client)
-		configRulesResult = append(configRulesResult, configRules...)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		for _,configRule := range configRules {
+		configRulesResult = append(configRulesResult, configRules...)
+		for _, configRule := range configRules {
 			evaluationResults, err := getComplianceDetails(client, *configRule.ConfigRuleName)
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
-			configRulesDetailsResult = append(configRulesDetailsResult, evaluationResults...)
+			complianceDetailsResult = append(complianceDetailsResult, evaluationResults...)
 		}
 	}
 	fmt.Println(configRulesResult)
-	fmt.Println(configRulesDetailsResult)
+	fmt.Println(complianceDetailsResult)
 }

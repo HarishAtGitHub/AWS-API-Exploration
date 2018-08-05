@@ -26,7 +26,8 @@ def get_config_rules(client):
         if isRequestSuccessful(response):
             if response['ConfigRules']:
                 config_rules.extend(response['ConfigRules'])
-        if not response.get("NextToken"):
+        next_token = response.get("NextToken")
+        if not next_token:
             break
     return config_rules
 
@@ -40,7 +41,8 @@ def get_compliance_details(client, rule_name):
         if isRequestSuccessful(response):
             if response["EvaluationResults"]:
                 compliance_details.extend(response["EvaluationResults"])
-        if not response.get("NextToken"):
+        next_token = response.get("NextToken")
+        if not next_token:
             break
     return compliance_details
 
