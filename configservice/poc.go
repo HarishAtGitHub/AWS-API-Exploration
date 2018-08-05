@@ -1,4 +1,4 @@
-package main
+package configservice
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
